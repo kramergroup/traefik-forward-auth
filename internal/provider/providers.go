@@ -11,6 +11,7 @@ import (
 type Providers struct {
 	Google Google `group:"Google Provider" namespace:"google" env-namespace:"GOOGLE"`
 	OIDC   OIDC   `group:"OIDC Provider" namespace:"oidc" env-namespace:"OIDC"`
+	Github Github `group:"Github Provider" namespace:"github" env-namespace:"GITHUB"`
 }
 
 // Provider is used to authenticate users

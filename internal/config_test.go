@@ -362,6 +362,11 @@ func TestConfigGetProvider(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal(&c.Providers.OIDC, p)
 
+	// Should be able to get "github" provider
+	p, err = c.GetProvider("github")
+	assert.Nil(err)
+	assert.Equal(&c.Providers.Github, p)
+
 	// Should catch unknown provider
 	p, err = c.GetProvider("bad")
 	if assert.Error(err) {
