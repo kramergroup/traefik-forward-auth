@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"net/url"
 
 	github "github.com/google/go-github/github"
 	"golang.org/x/oauth2"
@@ -19,10 +18,6 @@ type Github struct {
 	ClientSecret string `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
 	Scope        string
 	Organization string `long:"organisation" env:"ORGANISATION" description:"Github Organisation"`
-
-	LoginURL *url.URL
-	TokenURL *url.URL
-	UserURL  *url.URL
 }
 
 // Name returns the name of the provider
@@ -58,42 +53,115 @@ func (o *Github) Setup() error {
 
 // ExchangeCode exchanges the given redirect uri and code for a tokens
 func (o *Github) ExchangeCode(redirectURI, code string) (string, error) {
+
 	token, err := o.OAuthExchangeCode(redirectURI, code)
 	if err != nil {
 		return "", err
 	}
-	bytes, err := json.Marshal(token)
-	return string(bytes), err
+
+	// Return a serialised token because the full token is needed
+	// for resolving user information, not just the bearer token
+	return serialiseOauthToken(token)
+
 }
 
 // GetLoginURL provides the login url for the given redirect uri and state
 func (o *Github) GetLoginURL(redirectURI, state string) string {
+
 	c := o.ConfigCopy(redirectURI)
 	return c.AuthCodeURL(state)
+
 }
 
 // GetUser uses the given token and returns a complete provider.User object
 func (o *Github) GetUser(token string) (User, error) {
 
-	oauthToken := &oauth2.Token{}
-
-	err := json.Unmarshal([]byte(token), &oauthToken)
-	if err != nil {
-		return User{}, err
-	}
-
 	ctx := context.Background()
-	tp := oauth2.NewClient(ctx, oauth2.StaticTokenSource(oauthToken))
 
+	oauthToken, err := deserialiseOauthToken(token)
+	if err != nil {
+		return User{}, err
+	}
+
+	s := CreateGithubAPISession(ctx, oauthToken)
+	user, err := s.userDetails()
+
+	// Check organisation
+	// TODO This should be part of a separate validation step, but this
+	//      would need an API change, e.g., by adding a ValidateToken(token string)
+	//      method to the Provider interface, which is then called at the appropriate
+	//      place in the request handlers. Alternatively, a separate Validator could be
+	//      used to aggregate all validation logic in one place.
+
+	if o.Organization != "" {
+		ok, err := s.isMember(user.ID, o.Organization)
+		if err != nil || !ok {
+			return user, errors.New("User failed organisation membership verification")
+		}
+	}
+
+	return user, err
+
+}
+
+func (o *Github) validateOrganisation() {}
+
+// Support functions -------------------------------------------------------
+
+// serialiseOauthtoken serialises a token
+func serialiseOauthToken(token *oauth2.Token) (string, error) {
+
+	bytes, err := json.Marshal(token)
+	return string(bytes), err
+
+}
+
+func deserialiseOauthToken(token string) (*oauth2.Token, error) {
+
+	oauthToken := &oauth2.Token{}
+	err := json.Unmarshal([]byte(token), &oauthToken)
+	return oauthToken, err
+
+}
+
+// Github API calls -------------------------------------------------------
+
+// GithubAPISession reflects a "short-lived" communication session
+// with the Github API using authenticated transport
+type GithubAPISession struct {
+	ctx    context.Context
+	client *github.Client
+}
+
+// CreateGithubAPISession instantiates a new GithubAPISession
+func CreateGithubAPISession(context context.Context, token *oauth2.Token) *GithubAPISession {
+
+	tp := oauth2.NewClient(context, oauth2.StaticTokenSource(token))
 	client := github.NewClient(tp)
-	githubUser, _, err := client.Users.Get(ctx, "")
+
+	return &GithubAPISession{
+		ctx:    context,
+		client: client,
+	}
+
+}
+
+// getUserDetailsFromGithub queries the Github API for user data
+func (s *GithubAPISession) userDetails() (User, error) {
+
+	// Get user object
+	githubUser, _, err := s.client.Users.Get(s.ctx, "")
 	if err != nil {
 		return User{}, err
 	}
-	emails, _, err := client.Users.ListEmails(ctx, nil)
+
+	// Get all eMails registered for the user
+	emails, _, err := s.client.Users.ListEmails(s.ctx, nil)
 	if err != nil {
 		return User{}, err
 	}
+
+	// Use primary email for details
 	email := &github.UserEmail{}
 	for _, e := range emails {
 		if e.GetPrimary() {
@@ -101,6 +169,15 @@ func (o *Github) GetUser(token string) (User, error) {
 		}
 	}
 
-	user := User{Email: email.GetEmail(), Verified: email.GetVerified(), ID: githubUser.GetLogin()}
-	return user, nil
+	return User{
+		Email:    email.GetEmail(),
+		Verified: email.GetVerified(),
+		ID:       githubUser.GetLogin(),
+	}, err
+
+}
+
+func (s *GithubAPISession) isMember(user string, organisation string) (bool, error) {
+	member, _, err := s.client.Organizations.IsMember(s.ctx, organisation, user)
+	return member, err
 }
