@@ -12,7 +12,8 @@ workflows:
       - test
       - docker/publish:
           context: kramergroup-docker-public
-          image: "kramergroup/traefik-forward-auth:<< pipeline.git.revision >>"
+          image: kramergroup/traefik-forward-auth
+          tag: << pipeline.git.revision >>
 
 jobs:
 
