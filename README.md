@@ -1,10 +1,6 @@
 
 # Traefik Forward Auth [![Build Status](https://travis-ci.org/thomseddon/traefik-forward-auth.svg?branch=master)](https://travis-ci.org/thomseddon/traefik-forward-auth) [![Go Report Card](https://goreportcard.com/badge/github.com/thomseddon/traefik-forward-auth)](https://goreportcard.com/report/github.com/thomseddon/traefik-forward-auth) ![Docker Pulls](https://img.shields.io/docker/pulls/thomseddon/traefik-forward-auth.svg) [![GitHub release](https://img.shields.io/github/release/thomseddon/traefik-forward-auth.svg)](https://GitHub.com/thomseddon/traefik-forward-auth/releases/)
 
-:::warning
-This is a development fork of [thomseddon/traefik-forward-auth](https://GitHub.com/thomseddon/traefik-forward-auth/) to implement GitHub as provider. If you look for a working version please go to [upstream](https://GitHub.com/thomseddon/traefik-forward-auth/).
-:::
-
 A minimal forward authentication service that provides OAuth/SSO login and authentication for the [traefik](https://github.com/containous/traefik) reverse proxy/load balancer.
 
 ## Why?
@@ -125,6 +121,14 @@ You must set the `providers.google.client-id` and `providers.google.client-secre
 Any provider that supports OpenID Connect 1.0 can be configured via the OIDC config options below.
 
 You must set the `providers.oidc.issuer-url`, `providers.oidc.client-id` and `providers.oidc.client-secret` config options.
+
+##### Github
+
+Create a new [OAuth app on Github](https://developer.github.com/apps/building-oauth-apps/creating-an-oauth-app/) and note the **Client ID** and **Client Secret**.
+
+You must set the `providers.github.client-id` and `providers.github.client-secret` config options accordingly.
+
+If you set the `providers.github.organisation` option, membership of the provided organisation is checked before authenticating a user. If not set, all Github users will be authenticated.
 
 ## Configuration
 
