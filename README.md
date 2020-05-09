@@ -168,6 +168,11 @@ OIDC Provider:
   --providers.oidc.client-id=                           Client ID [$PROVIDERS_OIDC_CLIENT_ID]
   --providers.oidc.client-secret=                       Client Secret [$PROVIDERS_OIDC_CLIENT_SECRET]
 
+Github Provider:
+  --providers.github.client-id=                         Client ID [$PROVIDERS_GITHUB_CLIENT_ID]
+  --providers.github.client-secret=                     Client Secret [$PROVIDERS_GITHUB_CLIENT_SECRET]
+  --providers.github.organisation=                      Organisation [$PROVIDERS_GITHUB_ORGANISATION]
+
 Help Options:
   -h, --help                                            Show this help message
 ```
@@ -242,7 +247,7 @@ All options can be supplied in any of the following ways, in the following prece
 
 - `default-provider`
 
-   Set the default provider to use for authentication, this can be overridden within [rules](#rules). Valid options are currently `google` or `oidc`.
+   Set the default provider to use for authentication, this can be overridden within [rules](#rules). Valid options are currently `google`, `oidc` or `github`.
 
    Default: `google`
 
@@ -292,6 +297,7 @@ All options can be supplied in any of the following ways, in the following prece
        - `provider` - same usage as [`default-provider`](#default-provider), supported values:
            - `google`
            - `oidc`
+           - `github`
        - `rule` - a rule to match a request, this uses traefik's v2 rule parser for which you can find the documentation here: https://docs.traefik.io/v2.0/routing/routers/#rule, supported values are summarised here:
            - ``Headers(`key`, `value`)``
            - ``HeadersRegexp(`key`, `regexp`)``
