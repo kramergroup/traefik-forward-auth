@@ -52,7 +52,6 @@ func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 	// Modify request - Only requests coming through ForwardAuth will have the X-Forwarded headers
 	// set. If the auth endpoint is directly accessed (e.g., during the callback from an OAuth provider)
 	// this will not have happend.
-	r.Method = r.Header.Get("X-Forwarded-Method")
 	if mp := r.Header.Get("X-Forwarded-Method"); mp != "" {
 		r.Method = mp
 	}
