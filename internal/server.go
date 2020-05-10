@@ -52,7 +52,7 @@ func (s *Server) RootHandler(w http.ResponseWriter, r *http.Request) {
 	r.Method = r.Header.Get("X-Forwarded-Method")
 	r.Host = r.Header.Get("X-Forwarded-Host")
 	r.URL, _ = url.Parse(r.Header.Get("X-Forwarded-Uri"))
-
+	s.logger(r, "root", "Accepting connection: "+r.RequestURI)
 	// Pass to mux
 	s.router.ServeHTTP(w, r)
 }
