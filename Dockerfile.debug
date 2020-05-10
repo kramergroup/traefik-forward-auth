@@ -1,0 +1,18 @@
+FROM golang:1.13-alpine as builder
+
+# Setup
+RUN mkdir -p /go/src/github.com/thomseddon/traefik-forward-auth
+WORKDIR /go/src/github.com/thomseddon/traefik-forward-auth
+
+# Add libraries
+RUN apk add --no-cache git
+
+# Install delve
+RUN go get github.com/go-delve/delve/cmd/dlv
+
+# Run debugger
+ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on
+
+WORKDIR /go/src/github.com/thomseddon/traefik-forward-auth/cmd
+ENTRYPOINT [ "dlv", "debug", "--headless", "--listen=:2345", "--log", "--api-version=2" ]
+

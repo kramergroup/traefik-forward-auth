@@ -1,0 +1,92 @@
+version: "3.3"
+
+services:
+
+  traefik:
+    image: "traefik:v2.2"
+    container_name: "traefik"
+    command:
+      #- "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:8000"
+      - "--entrypoints.websecure.address=:8443"
+    ports:
+      - "8000:8000"
+      - "8080:8080"
+      - "8443:8443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      
+  # auth:
+  #   build: .
+  #   container_name: auth
+  #   environment:
+  #     - LOG_LEVEL=debug
+  #     - SECRET=a-fab-secret
+  #     - DEFAULT_PROVIDER=github
+  #     - PROVIDERS_GITHUB_CLIENT_ID=91e34e8c5e19e235d2d8
+  #     - PROVIDERS_GITHUB_CLIENT_SECRET=dda0c11da273f878dadc772ff37282ef29d52198
+  #     - PROVIDERS_GITHUB_ORGANIZATION=kramergroup
+  #   labels:
+  #   - traefik.http.services.auth.loadbalancer.server.port=4181
+  #   # The _oauth route needs to be accessible for callbacks
+  #   - traefik.http.routers.auth.rule=Path(`/_oauth`)
+  #   - traefik.http.routers.auth.entrypoints=web"
+  #   # Separate router for https transport needed
+  #   - traefik.http.routers.auth-tls.rule=Path(`/_oauth`)
+  #   - traefik.http.routers.auth-tls.entrypoints=websecure"
+  #   - traefik.http.routers.auth-tls.tls
+  #   ports:
+  #   - 4181:4181
+
+  # Use this service for debugging 
+  auth:
+    build: 
+      context: .
+      dockerfile: Dockerfile.debug
+    container_name: auth
+    environment:
+      - LOG_LEVEL=debug
+      - SECRET=a-fab-secret
+      - DEFAULT_PROVIDER=github
+      - INSECURE_COOKIE=true
+      - PROVIDERS_GITHUB_CLIENT_ID=91e34e8c5e19e235d2d8
+      - PROVIDERS_GITHUB_CLIENT_SECRET=dda0c11da273f878dadc772ff37282ef29d52198
+      - PROVIDERS_GITHUB_ORGANISATION=kramergroup
+    labels:
+      - traefik.http.services.auth.loadbalancer.server.port=4181
+      # The _oauth route needs to be accessible for callbacks
+      - traefik.http.routers.auth.rule=Path(`/_oauth`)
+      - traefik.http.routers.auth.entrypoints=web"
+      # Separate router for https transport needed
+      - traefik.http.routers.auth-tls.rule=Path(`/_oauth`)
+      - traefik.http.routers.auth-tls.entrypoints=websecure"
+      - traefik.http.routers.auth-tls.tls
+    ports:
+    - 2345:2345 # Connect to this port with dlv remotely for debugging
+    - 4181:4181
+    volumes:
+    - .:/go/src/github.com/thomseddon/traefik-forward-auth
+
+  whoami:
+    image: "containous/whoami"
+    container_name: "simple-service"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.whoami.loadbalancer.server.port=80"
+      # Set the standard route for http transport
+      - "traefik.http.routers.whoami.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.whoami.entrypoints=web"
+      # Traefik requires separate routes for https traffic 
+      - "traefik.http.routers.whoami-tls.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.whoami-tls.entrypoints=websecure"
+      - "traefik.http.routers.whoami-tls.tls"
+      # Set the middleware (again separate configurations for each router)
+      - "traefik.http.middlewares.test-auth.forwardauth.address=http://auth:4181" # Replace-Here with host IP for debugging
+      - "traefik.http.routers.whoami.middlewares=test-auth@docker"
+      - "traefik.http.routers.whoami-tls.middlewares=test-auth@docker"
+    ports:
+    - 80:8010
+      
